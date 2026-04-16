@@ -14,7 +14,42 @@ const getNodeColor = (node) => {
   return classificationMap[node.classification] || '#475569'
 }
 
-// Domains that appear in multiple APKs = cartel hub
+// Build cartel hubs list from edges - any domain that appears at least once
+function buildCartelHubs(nodes, edges) {
+  if (!nodes || !edges) {
+    console.log("buildCartelHubs: nodes or edges is null/undefined")
+    return []
+  }
+  
+  // Step 1 — Count incoming connections for each domain node
+  const domainConnectionCount = {}
+  
+  edges.forEach(edge => {
+    const targetNode = nodes.find(n => n.id === edge.target)
+    if (targetNode && targetNode.type === 'domain') {
+      domainConnectionCount[edge.target] = 
+        (domainConnectionCount[edge.target] || 0) + 1
+    }
+  })
+  
+  console.log("Domain Connection Count:", domainConnectionCount)
+  
+  // Step 2 — Build cartel hubs list
+  // A cartel hub = any domain node that appears in at least 1 edge
+  const cartelHubs = nodes
+    .filter(n => n.type === 'domain' && domainConnectionCount[n.id] > 0)
+    .map(n => ({
+      id: n.id,
+      label: n.label,
+      classification: n.classification,
+      connectionCount: domainConnectionCount[n.id] || 0
+    }))
+    .sort((a, b) => b.connectionCount - a.connectionCount)
+  
+  return cartelHubs
+}
+
+// Legacy function for graph rendering - domains with 2+ connections
 function findHubs(nodes, edges) {
   const domainCount = {}
   edges.forEach(e => {
@@ -38,6 +73,7 @@ export default function CartelGraph() {
   const [graphData, setGraphData] = useState(null)
   const [selected, setSelected]   = useState(null)
   const [stats, setStats]         = useState({ apks: 0, domains: 0, hubs: 0, edges: 0 })
+  const [cartelHubs, setCartelHubs] = useState([])
   const [loading, setLoading]     = useState(true)
   const zoomRef   = useRef(null)
   const svgElRef  = useRef(null)
@@ -53,10 +89,16 @@ export default function CartelGraph() {
 
     const { nodes: rawNodes, edges: rawEdges } = graphData
     const hubs = findHubs(rawNodes, rawEdges)
+    const cartelHubsList = buildCartelHubs(rawNodes, rawEdges)
+    
+    // DEBUG: Check if cartel hubs are being built correctly
+    console.log("CARTEL HUBS:", cartelHubsList)
+    
+    setCartelHubs(cartelHubsList)
 
     const apkCount    = rawNodes.filter(n => n.type === 'apk').length
     const domainCount = rawNodes.filter(n => n.type === 'domain').length
-    setStats({ apks: apkCount, domains: domainCount, hubs: hubs.size, edges: rawEdges.length })
+    setStats({ apks: apkCount, domains: domainCount, hubs: cartelHubsList.length, edges: rawEdges.length })
 
     const container = svgRef.current.parentElement
     const W = container.clientWidth  || 900
@@ -388,18 +430,41 @@ export default function CartelGraph() {
           </div>
 
           {/* Cartel hubs list */}
-          {graphData && (
+          {cartelHubs.length > 0 && (
             <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-              <div className="bg-red-700 px-3 py-2">
+              <div className="bg-red-700 px-3 py-2 flex items-center justify-between">
                 <span className="text-xs font-bold text-white uppercase tracking-wide">⚑ Cartel Hubs</span>
+                <span className="text-[10px] text-white bg-white/20 px-2 py-0.5 rounded-full font-bold">
+                  {cartelHubs.length}
+                </span>
               </div>
-              <div className="p-3 space-y-1 max-h-48 overflow-y-auto">
-                {Array.from(findHubs(graphData.nodes, graphData.edges)).map(hub => (
-                  <div key={hub} className="flex items-center gap-1.5 text-[10px] bg-red-50 border border-red-200 rounded px-2 py-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0" />
-                    <span className="font-mono text-red-800 truncate">{hub}</span>
-                  </div>
-                ))}
+              <div className="p-3 space-y-1.5 max-h-64 overflow-y-auto">
+                {cartelHubs.map(hub => {
+                  const classColors = {
+                    'CHINESE_INFRASTRUCTURE': 'bg-red-50 border-red-300 text-red-800',
+                    'SUSPICIOUS': 'bg-red-50 border-red-300 text-red-800',
+                    'STAGING_IN_PRODUCTION': 'bg-amber-50 border-amber-300 text-amber-800',
+                    'BURNER_DOMAIN': 'bg-orange-50 border-orange-300 text-orange-800',
+                  }
+                  const colorClass = classColors[hub.classification] || 'bg-gray-50 border-gray-300 text-gray-800'
+                  
+                  return (
+                    <div key={hub.id} className={`flex items-start gap-2 text-[10px] border rounded px-2 py-1.5 ${colorClass}`}>
+                      <span className="w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0 mt-1" />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-mono font-bold truncate">{hub.label}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-[9px] opacity-70">{hub.connectionCount} APK{hub.connectionCount > 1 ? 's' : ''}</span>
+                          {hub.classification && (
+                            <span className="text-[8px] uppercase tracking-wider opacity-60">
+                              {hub.classification.replace(/_/g, ' ')}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
             </div>
           )}

@@ -7,9 +7,11 @@ export default function AlertsFeed() {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [lastUpdate, setLastUpdate] = useState(new Date())
+  const [corsError, setCorsError] = useState(false)
 
   const fetchAlerts = async () => {
     setRefreshing(true)
+    setCorsError(false)
     try {
       const response = await fetch('http://34.14.189.124:8000/api/v1/alerts')
       const data = await response.json()
@@ -19,6 +21,10 @@ export default function AlertsFeed() {
       setLoading(false)
     } catch (error) {
       console.error('Failed to fetch alerts:', error)
+      // Check if it's a CORS error
+      if (error.message.includes('fetch')) {
+        setCorsError(true)
+      }
       setLoading(false)
     } finally {
       setRefreshing(false)
@@ -93,7 +99,29 @@ export default function AlertsFeed() {
       </div>
 
       {/* Alerts List */}
-      {loading ? (
+      {corsError ? (
+        <div className="bg-orange-50 rounded-lg border border-orange-200 p-6 text-center">
+          <AlertTriangle className="w-12 h-12 text-orange-500 mx-auto mb-3" />
+          <p className="text-sm font-bold text-orange-800 mb-2">CORS Configuration Required</p>
+          <p className="text-xs text-orange-700 mb-3">
+            The backend at <code className="bg-orange-100 px-1 rounded">http://34.14.189.124:8000</code> needs to allow requests from <code className="bg-orange-100 px-1 rounded">http://34.100.137.12</code>
+          </p>
+          <div className="bg-white border border-orange-300 rounded-lg p-3 text-left text-xs text-gray-700">
+            <p className="font-bold mb-1">Backend Dev: Add this to FastAPI:</p>
+            <pre className="bg-gray-50 p-2 rounded overflow-x-auto text-[10px] font-mono">
+{`from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://34.100.137.12", "*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)`}
+            </pre>
+          </div>
+        </div>
+      ) : loading ? (
         <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
           <div className="w-8 h-8 border-2 border-red-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
           <p className="text-sm text-gray-500">Loading alerts...</p>
