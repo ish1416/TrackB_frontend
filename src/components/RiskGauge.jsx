@@ -12,41 +12,35 @@ function getTier(raw, isCritical) {
   return THRESHOLDS.low
 }
 
-export default function RiskGauge({ score, isCriticalOverride }) {
-  // Normalise: accept 0.0–1.0 or 0–100, guard NaN/null
+// REQ 1: isStage2Loaded drives label/subtext — NOT the raw sandbox_status field
+export default function RiskGauge({ score, isCriticalOverride, isStage2Loaded }) {
   let raw = isCriticalOverride ? 1.0 : Number(score ?? 0)
   if (isNaN(raw)) raw = 0
-  if (raw > 1)    raw = raw / 100          // handle accidental 0–100 input
+  if (raw > 1)    raw = raw / 100
   raw = Math.min(Math.max(raw, 0), 1)
 
   const tier = getTier(raw, isCriticalOverride)
   const pct  = Math.round(raw * 100)
 
-  // SVG donut math
+  // REQ 1 — label and subtext driven by React state, not API field
+  const gaugeLabel   = isStage2Loaded ? 'Final Combined Score'   : 'Static Analysis Score'
+  const gaugeSubtext = isStage2Loaded ? 'Analysis Complete'      : 'Deep sandbox analysis in progress…'
+
   const size   = 190
   const cx     = size / 2
   const cy     = size / 2
   const radius = 72
   const stroke = 18
   const circumference = 2 * Math.PI * radius
-  // clamp so the arc is always visible (min 2% arc for non-zero scores)
   const arcLen = raw === 0 ? 0 : Math.max(circumference * raw, circumference * 0.02)
-  const dashArray  = `${arcLen} ${circumference}`
-  // start from top (rotate -90deg via transform)
+  const dashArray = `${arcLen} ${circumference}`
 
   return (
     <div className="flex flex-col items-center gap-2">
       {/* Donut */}
       <div className="relative" style={{ width: size, height: size, filter: raw > 0 ? `drop-shadow(${tier.glow})` : 'none' }}>
         <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
-          {/* Track */}
-          <circle
-            cx={cx} cy={cy} r={radius}
-            fill="none"
-            stroke="#e8eaf6"
-            strokeWidth={stroke}
-          />
-          {/* Filled arc — pure SVG, no Recharts, no animation bugs */}
+          <circle cx={cx} cy={cy} r={radius} fill="none" stroke="#e8eaf6" strokeWidth={stroke} />
           {raw > 0 && (
             <circle
               cx={cx} cy={cy} r={radius}
@@ -58,14 +52,18 @@ export default function RiskGauge({ score, isCriticalOverride }) {
             />
           )}
         </svg>
-
-        {/* Center label */}
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           <span className="text-4xl font-black leading-none tabular-nums" style={{ color: tier.color }}>
             {pct}
           </span>
           <span className="text-[10px] text-gray-400 font-semibold tracking-widest mt-0.5">RISK SCORE</span>
         </div>
+      </div>
+
+      {/* REQ 1 — dynamic label */}
+      <div className="text-center">
+        <p className="text-[11px] font-black text-gray-700 uppercase tracking-widest">{gaugeLabel}</p>
+        <p className="text-[10px] text-gray-400 mt-0.5">{gaugeSubtext}</p>
       </div>
 
       {/* Verdict badge */}

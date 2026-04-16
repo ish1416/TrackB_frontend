@@ -2,6 +2,7 @@ import { useState, useRef, useCallback } from 'react'
 import { Upload, FileArchive, AlertCircle, CheckCircle2, Cpu, ShieldCheck, Network, BarChart3 } from 'lucide-react'
 import { useAnalysis } from '../hooks/useAnalysis'
 import ResultsPanel from './ResultsPanel'
+import AlertsFeed from './AlertsFeed'
 
 const FEATURES = [
   { icon: Cpu,        label: 'Static ML Inference' },
@@ -54,10 +55,11 @@ export default function FileAnalysis() {
   const isLoading = stage === 'loading'
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-      {/* ── Left Panel ── */}
-      <div className="lg:col-span-1 space-y-4">
+        {/* ── Left Panel ── */}
+        <div className="lg:col-span-1 space-y-4">
 
         {/* Feature list */}
         <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden card-lift">
@@ -167,8 +169,60 @@ export default function FileAnalysis() {
             </div>
           </div>
         )}
+
+        {/* Loading skeleton — shown while APK is uploading / backend is processing */}
+        {stage === 'loading' && (
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+            <div className="bg-[#1a237e] px-4 py-2.5 flex items-center gap-2">
+              <div className="w-4 h-4 rounded bg-white/20 animate-pulse" />
+              <div className="h-3 w-48 rounded bg-white/20 animate-pulse" />
+            </div>
+            <div className="p-5 space-y-5">
+              {/* Gauge + chips skeleton */}
+              <div className="flex gap-6">
+                <div className="w-[190px] h-[190px] rounded-full bg-gray-100 animate-pulse flex-shrink-0" />
+                <div className="flex-1 space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    {[...Array(4)].map((_, i) => (
+                      <div key={i} className="bg-gray-100 rounded-lg p-3 space-y-2 animate-pulse">
+                        <div className="h-2 w-16 bg-gray-200 rounded" />
+                        <div className="h-4 w-24 bg-gray-200 rounded" />
+                      </div>
+                    ))}
+                  </div>
+                  {/* Scanning status */}
+                  <div className="bg-[#e8eaf6] border border-[#c5cae9] rounded-lg px-4 py-3 flex items-center gap-3">
+                    <div className="w-2 h-2 rounded-full bg-[#1a237e] animate-ping flex-shrink-0" />
+                    <div>
+                      <p className="text-xs font-bold text-[#1a237e]">Static Analysis In Progress</p>
+                      <p className="text-[10px] text-gray-500 mt-0.5">Running ML inference pipeline — please wait…</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              {/* Risk bar skeletons */}
+              <div className="bg-[#f5f6ff] border border-[#e8eaf6] rounded-lg p-4 space-y-3">
+                <div className="h-2 w-32 bg-gray-200 rounded animate-pulse" />
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <div className="w-36 h-2 bg-gray-200 rounded animate-pulse" />
+                    <div className="flex-1 h-1.5 bg-gray-200 rounded-full animate-pulse" />
+                    <div className="w-6 h-2 bg-gray-200 rounded animate-pulse" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
         <ResultsPanel stage={stage} stage1Data={stage1Data} stage2Data={stage2Data} onReset={handleReset} />
       </div>
     </div>
+
+    {/* REQ 7 — Alerts Feed */}
+    <div className="mt-6">
+      <AlertsFeed />
+    </div>
+  </div>
   )
 }

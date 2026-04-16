@@ -1,16 +1,20 @@
 import { useState, useEffect } from 'react'
 import FileAnalysis from './components/FileAnalysis'
 import LinkOsint from './components/LinkOsint'
+import CartelGraph from './components/CartelGraph'
+import B2CShield from './components/B2CShield'
 import {
   Shield, FileSearch, Link2, Clock,
   CheckCircle2, AlertOctagon, Activity,
   Phone, Mail, ExternalLink, Info,
-  ChevronRight, Lock, Globe
+  ChevronRight, Lock, Globe, Network, Smartphone
 } from 'lucide-react'
 
 const TABS = [
-  { id: 'file', label: 'APK File Analysis', icon: FileSearch },
-  { id: 'link', label: 'URL / Link OSINT',  icon: Link2 },
+  { id: 'file',   label: 'APK File Analysis',      icon: FileSearch },
+  { id: 'link',   label: 'URL / Link OSINT',        icon: Link2 },
+  { id: 'cartel', label: 'Cartel Threat Network',   icon: Network },
+  { id: 'b2c',    label: 'Consumer Shield',         icon: Smartphone },
 ]
 
 const TICKER_ITEMS = [
@@ -278,14 +282,17 @@ export default function App() {
           <span className="hover:underline cursor-pointer">AppGuard</span>
           <ChevronRight className="w-3 h-3 text-gray-400" />
           <span className="font-semibold text-[#1a237e]">
-            {activeTab === 'file' ? 'APK File Analysis' : 'URL / Link OSINT'}
+            {activeTab === 'file' ? 'APK File Analysis' : activeTab === 'link' ? 'URL / Link OSINT' : activeTab === 'cartel' ? 'Cartel Threat Network' : 'Consumer Shield'}
           </span>
         </div>
       </div>
 
       {/* ── Main Content ── */}
       <main id="main-content" className="flex-1 max-w-7xl mx-auto w-full px-4 py-6 fade-in" key={activeTab}>
-        {activeTab === 'file' ? <FileAnalysis /> : <LinkOsint />}
+        {activeTab === 'file'   && <FileAnalysis />}
+        {activeTab === 'link'   && <LinkOsint />}
+        {activeTab === 'cartel' && <CartelGraph />}
+        {activeTab === 'b2c'    && <B2CShield />}
       </main>
 
       {/* ══════════════════════════════════════════
