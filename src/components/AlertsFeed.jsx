@@ -5,9 +5,11 @@ export default function AlertsFeed() {
   const [alerts, setAlerts] = useState([])
   const [totalDetections, setTotalDetections] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [lastUpdate, setLastUpdate] = useState(new Date())
 
   const fetchAlerts = async () => {
+    setRefreshing(true)
     try {
       const response = await fetch('http://34.14.189.124:8000/api/v1/alerts')
       const data = await response.json()
@@ -18,6 +20,8 @@ export default function AlertsFeed() {
     } catch (error) {
       console.error('Failed to fetch alerts:', error)
       setLoading(false)
+    } finally {
+      setRefreshing(false)
     }
   }
 
@@ -46,10 +50,11 @@ export default function AlertsFeed() {
           </div>
           <button
             onClick={fetchAlerts}
-            className="flex items-center gap-1.5 text-xs bg-white/20 hover:bg-white/30 text-white px-2.5 py-1 rounded transition-colors"
+            disabled={refreshing}
+            className="flex items-center gap-1.5 text-xs bg-white/20 hover:bg-white/30 disabled:opacity-50 disabled:cursor-not-allowed text-white px-2.5 py-1 rounded transition-colors"
           >
-            <RefreshCw className="w-3 h-3" />
-            Refresh
+            <RefreshCw className={`w-3 h-3 ${refreshing ? 'animate-spin' : ''}`} />
+            {refreshing ? 'Refreshing...' : 'Refresh'}
           </button>
         </div>
 
